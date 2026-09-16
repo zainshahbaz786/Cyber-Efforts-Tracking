@@ -1,0 +1,258 @@
+@media print {
+  header,
+  #main-nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  section {
+    break-inside: avoid;
+  }
+
+  details {
+    break-inside: avoid;
+  }
+
+  details[open] summary ~ * {
+    display: block !important;
+  }
+}
+
+#app-loading {
+  display: flex;
+}
+
+#app-loading.hidden {
+  display: none;
+}
+
+dialog::backdrop {
+  background: rgb(15 23 42 / 0.45);
+}
+
+.main-tab {
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(100 116 139);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.main-tab:hover {
+  color: rgb(15 23 42);
+}
+
+.main-tab.is-active {
+  border-bottom-color: rgb(2 132 199);
+  color: rgb(3 105 161);
+}
+
+.rag-legend {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-weight: 500;
+}
+
+.rag-legend-red {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.rag-legend-amber {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.rag-legend-green {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.rag-legend-grey {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+/* —— Insights —— */
+.insight-stat {
+  border-radius: 0.75rem;
+  border-width: 1px;
+  padding: 0.75rem 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.insight-stat-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.insight-stat-value {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.rag-stat-red {
+  border-color: rgb(248 113 113 / 0.45);
+  background: rgb(220 38 38 / 0.2);
+}
+
+.rag-stat-amber {
+  border-color: rgb(251 191 36 / 0.45);
+  background: rgb(217 119 6 / 0.2);
+}
+
+.rag-stat-green {
+  border-color: rgb(52 211 153 / 0.45);
+  background: rgb(5 150 105 / 0.2);
+}
+
+.rag-stat-grey {
+  border-color: rgb(148 163 184 / 0.45);
+  background: rgb(100 116 139 / 0.25);
+}
+
+.insight-card {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+}
+
+.insight-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgb(241 245 249);
+  padding: 1rem 1.25rem;
+}
+
+.insight-card-header h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgb(15 23 42);
+}
+
+.insight-card-header p {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: rgb(100 116 139);
+}
+
+.insight-help {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(226 232 240);
+  background: rgb(248 250 252);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgb(100 116 139);
+  line-height: 1;
+}
+
+.insight-help:hover {
+  background: rgb(241 245 249);
+  color: rgb(51 65 85);
+}
+
+.insight-chart-wrap {
+  position: relative;
+  min-height: 220px;
+  padding: 0.5rem 1rem 1.25rem;
+}
+
+.insight-chart-wrap-wide {
+  min-height: 260px;
+}
+
+.insight-table {
+  padding: 0 0.5rem 0.75rem;
+}
+
+.insight-table .tabulator {
+  border: none;
+  background: transparent;
+  font-size: 0.8125rem;
+}
+
+.insight-table .tabulator-header {
+  border-bottom: 1px solid rgb(226 232 240);
+  background: rgb(248 250 252);
+}
+
+.insight-table .tabulator-col-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+.insight-table .tabulator-row {
+  border-bottom: 1px solid rgb(241 245 249);
+}
+
+.insight-table .tabulator-row.tabulator-row-even {
+  background: rgb(248 250 252 / 0.5);
+}
+
+.tippy-box[data-theme~='cet-insights'] {
+  background-color: rgb(15 23 42);
+  color: rgb(248 250 252);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  box-shadow: 0 10px 25px rgb(0 0 0 / 0.2);
+}
+
+.tippy-box[data-theme~='cet-insights'][data-placement^='top'] > .tippy-arrow::before {
+  border-top-color: rgb(15 23 42);
+}
+
+.project-drawer-panel {
+  animation: drawer-in 0.28s ease-out;
+}
+
+#project-drawer.hidden .project-drawer-panel {
+  animation: none;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+body.drawer-open {
+  overflow: hidden;
+}
+
+.insight-table .tabulator-cell[tabulator-field='rag'] {
+  font-weight: 600;
+  font-size: 0.75rem;
+}

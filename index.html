@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cyber Efforts Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Segoe UI', 'system-ui', 'sans-serif'] },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="css/custom.css" />
+    <link rel="stylesheet" href="libs/tabulator/tabulator.min.css" />
+    <link rel="stylesheet" href="libs/tippy/tippy.css" />
+    <link rel="stylesheet" href="libs/flatpickr/flatpickr.min.css" />
+    <script src="libs/chartjs/chart.umd.min.js"></script>
+    <script src="libs/chartjs/chartjs-plugin-datalabels.min.js"></script>
+    <script src="js/chart-setup.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="libs/pnp-3.0.10.js"></script>
+  </head>
+  <body class="min-h-screen bg-slate-100 text-slate-900">
+    <header class="border-b border-slate-200 bg-white print:hidden">
+      <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight">Cyber Efforts Tracker</h1>
+          <p class="text-sm text-slate-500">Digital &amp; Cyber Readiness · Project &amp; effort management</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btn-refresh" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50">
+            Refresh
+          </button>
+          <button id="btn-export-pdf" type="button" class="rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white hover:bg-slate-900">
+            Weekly PDF
+          </button>
+          <button id="btn-export-print" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50">
+            Print
+          </button>
+        </div>
+      </div>
+      <nav id="main-nav" class="mx-auto max-w-7xl border-t border-slate-100 px-4 print:hidden" aria-label="Main">
+        <div class="flex gap-1">
+          <button type="button" data-nav="dashboard" class="main-tab">Dashboard</button>
+          <button type="button" data-nav="projects" class="main-tab">Projects</button>
+          <button type="button" data-nav="insights" class="main-tab">Insights</button>
+        </div>
+      </nav>
+    </header>
+
+    <p id="load-error" class="mx-auto hidden max-w-7xl px-4 py-2 text-sm text-red-700"></p>
+    <p id="export-meta" class="mx-auto max-w-7xl px-4 pt-4 text-xs text-slate-500 print:block"></p>
+
+    <main class="mx-auto max-w-7xl px-4 py-6">
+      <!-- DASHBOARD: weekly management view -->
+      <section data-view="dashboard" class="view-panel space-y-8">
+        <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+          Answers: <strong>What is due?</strong> · <strong>What is overdue?</strong> · <strong>What changed this week?</strong> · Use <em>Insights</em> for workload &amp; effort.
+        </div>
+        <section id="kpi-cards" aria-label="Key metrics"></section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold">What changed this week</h2>
+              <p id="change-week-label" class="text-sm text-slate-500"></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="week-prev" type="button" class="rounded border px-2 py-1 text-sm">← Prev</button>
+              <button id="week-reset" type="button" class="rounded border px-2 py-1 text-sm">This week</button>
+              <button id="week-next" type="button" class="rounded border px-2 py-1 text-sm">Next →</button>
+            </div>
+          </div>
+          <div id="change-panel" class="space-y-3"></div>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="mb-1 text-lg font-semibold">Overdue submissions</h2>
+          <p class="mb-3 text-xs text-slate-500">Planned date passed, not submitted, not cancelled</p>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100 text-sm">
+              <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th class="px-3 py-2">Project</th>
+                  <th class="px-3 py-2">Type</th>
+                  <th class="px-3 py-2">Planned</th>
+                  <th class="px-3 py-2">Days overdue</th>
+                  <th class="px-3 py-2">Owner</th>
+                  <th class="px-3 py-2">RAG</th>
+                </tr>
+              </thead>
+              <tbody id="overdue-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 class="mb-1 text-lg font-semibold">Next 14 days</h2>
+          <p class="mb-3 text-xs text-slate-500">Upcoming deliverables (management horizon)</p>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-100 text-sm">
+              <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th class="px-3 py-2">Project</th>
+                  <th class="px-3 py-2">Type</th>
+                  <th class="px-3 py-2">Planned</th>
+                  <th class="px-3 py-2">Owner</th>
+                  <th class="px-3 py-2">RAG</th>
+                  <th class="px-3 py-2">Days left</th>
+                  <th class="px-3 py-2">Latest note</th>
+                </tr>
+              </thead>
+              <tbody id="next14-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- PROJECTS: register, filter, inline edit -->
+      <section data-view="projects" class="view-panel hidden space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold">Project register</h2>
+            <p class="text-sm text-slate-500">Search, filter, sort · inline edit status &amp; Cyber PM</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-new-project" type="button" class="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+              New project
+            </button>
+            <button id="btn-column-picker" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
+              Columns
+            </button>
+          </div>
+        </div>
+
+        <div id="filter-chips" class="hidden"></div>
+
+        <div class="grid gap-2 md:grid-cols-4 lg:grid-cols-7 rounded-xl border border-slate-200 bg-white p-4">
+          <select id="filter-status" class="rounded border-slate-300 text-sm"><option value="">All statuses</option></select>
+          <select id="filter-stage" class="rounded border-slate-300 text-sm"><option value="">All stages</option></select>
+          <select id="filter-rag" class="rounded border-slate-300 text-sm"><option value="">All RAG</option></select>
+          <select id="filter-cyber-prov" class="rounded border-slate-300 text-sm"><option value="">Cyber provisioned</option></select>
+          <input id="filter-client" placeholder="Client" class="rounded border-slate-300 text-sm" />
+          <input id="filter-title" placeholder="Title search" class="rounded border-slate-300 text-sm" />
+          <input id="filter-cyber-pm" placeholder="Cyber PM" class="rounded border-slate-300 text-sm" />
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input id="filter-my-projects" type="checkbox" class="rounded border-slate-300" />
+          My projects (Cyber PM = me)
+        </label>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table class="min-w-full divide-y divide-slate-100 text-sm">
+            <thead id="project-table-head" class="bg-slate-50"></thead>
+            <tbody id="project-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- INSIGHTS: analytics & workload -->
+      <section data-view="insights" class="view-panel hidden space-y-6">
+        <div class="insight-hero rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 text-white shadow-lg">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-semibold tracking-tight">Portfolio insights</h2>
+              <p class="mt-1 max-w-xl text-sm text-slate-300">
+                RAG is computed automatically. Click any chart segment to open a filtered view on
+                <strong class="text-white">Projects</strong>.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-lg bg-white/10 px-3 py-2 text-sm font-medium ring-1 ring-white/20 hover:bg-white/15"
+              data-tippy-content="Red: overdue or blocked &gt;14 days.<br>Amber: due within 7 days, blocked ≤14d, or ≥80% budget before DD.<br>Green: on track.<br>Grey: on hold, closed, or no submissions."
+            >
+              What is RAG?
+            </button>
+          </div>
+          <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            <div class="insight-stat rag-stat-red">
+              <span class="insight-stat-label">Red</span>
+              <span id="insight-count-red" class="insight-stat-value">0</span>
+            </div>
+            <div class="insight-stat rag-stat-amber">
+              <span class="insight-stat-label">Amber</span>
+              <span id="insight-count-amber" class="insight-stat-value">0</span>
+            </div>
+            <div class="insight-stat rag-stat-green">
+              <span class="insight-stat-label">Green</span>
+              <span id="insight-count-green" class="insight-stat-value">0</span>
+            </div>
+            <div class="insight-stat rag-stat-grey">
+              <span class="insight-stat-label">Grey</span>
+              <span id="insight-count-grey" class="insight-stat-value">0</span>
+            </div>
+            <div class="insight-stat border-red-400/40 bg-red-500/10">
+              <span class="insight-stat-label text-red-100">Overdue subs</span>
+              <span id="insight-count-overdue" class="insight-stat-value">0</span>
+            </div>
+            <div class="insight-stat border-amber-400/40 bg-amber-500/10">
+              <span class="insight-stat-label text-amber-100">Blocked</span>
+              <span id="insight-count-blocked" class="insight-stat-value">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+          <article class="insight-card">
+            <header class="insight-card-header">
+              <div>
+                <h3>Portfolio RAG</h3>
+                <p>Active projects by health</p>
+              </div>
+              <button type="button" class="insight-help" data-tippy-content="Share of active projects in each RAG band. Click a slice to filter Projects.">?</button>
+            </header>
+            <div class="insight-chart-wrap"><canvas id="chart-rag"></canvas></div>
+          </article>
+          <article class="insight-card">
+            <header class="insight-card-header">
+              <div>
+                <h3>Status breakdown</h3>
+                <p>Excludes Closed &amp; Not awarded</p>
+              </div>
+              <button type="button" class="insight-help" data-tippy-content="Where delivery effort is stuck: Active, Blocked, On hold, etc.">?</button>
+            </header>
+            <div class="insight-chart-wrap"><canvas id="chart-status"></canvas></div>
+          </article>
+          <article class="insight-card lg:col-span-2">
+            <header class="insight-card-header">
+              <div>
+                <h3>Stage funnel</h3>
+                <p>Active projects per lifecycle stage</p>
+              </div>
+              <button type="button" class="insight-help" data-tippy-content="Bar height = count at each stage. Colour intensity follows RAG-style scale (green = fuller funnel).">?</button>
+            </header>
+            <div class="insight-chart-wrap insight-chart-wrap-wide"><canvas id="chart-stage"></canvas></div>
+          </article>
+          <article class="insight-card lg:col-span-2">
+            <header class="insight-card-header">
+              <div>
+                <h3>Effort vs cyber budget</h3>
+                <p>Top projects by % budget consumed</p>
+              </div>
+              <button type="button" class="insight-help" data-tippy-content="Bar colour matches project RAG. Amber rule: ≥80% of budget used before Detailed Design. Click a bar to open the project.">?</button>
+            </header>
+            <div class="insight-chart-wrap insight-chart-wrap-wide"><canvas id="chart-effort"></canvas></div>
+          </article>
+          <article class="insight-card lg:col-span-2">
+            <header class="insight-card-header">
+              <div>
+                <h3>Workload by Cyber PM</h3>
+                <p>Stacked man-months — last 6 months</p>
+              </div>
+              <button type="button" class="insight-help" data-tippy-content="Each colour is a person (RAG palette cycle). Use this to spot overloaded PMs.">?</button>
+            </header>
+            <div class="insight-chart-wrap insight-chart-wrap-wide"><canvas id="chart-load"></canvas></div>
+          </article>
+        </div>
+
+        <div class="space-y-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Detail tables</h3>
+          <div class="grid gap-4 xl:grid-cols-2">
+            <article class="insight-card">
+              <header class="insight-card-header border-amber-200/80">
+                <div>
+                  <h3 class="text-amber-900">Blocked by client</h3>
+                  <p>Longest blockers first</p>
+                </div>
+              </header>
+              <div id="tabulator-blocked" class="insight-table"></div>
+            </article>
+            <article class="insight-card">
+              <header class="insight-card-header">
+                <div>
+                  <h3>Coverage gaps</h3>
+                  <p>No Cyber PM or not assessed</p>
+                </div>
+              </header>
+              <div id="tabulator-coverage" class="insight-table"></div>
+            </article>
+            <article class="insight-card xl:col-span-2">
+              <header class="insight-card-header border-red-200/80 flex-wrap gap-2">
+                <div>
+                  <h3 class="text-red-900">Schedule slippage</h3>
+                  <p>Planned dates moved later (from change log)</p>
+                </div>
+                <label class="ml-auto flex items-center gap-2 text-sm font-normal text-slate-600">
+                  Lookback
+                  <select id="insights-slippage-range" class="rounded-lg border-slate-300 py-1 pl-2 pr-8 text-sm">
+                    <option value="4">4 weeks</option>
+                    <option value="8" selected>8 weeks</option>
+                    <option value="12">12 weeks</option>
+                  </select>
+                </label>
+              </header>
+              <div id="tabulator-slippage" class="insight-table"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Project detail slide-over (stays on Dashboard / Projects / Insights) -->
+    <div id="project-drawer" class="fixed inset-0 z-50 hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="project-drawer-title">
+      <div id="project-drawer-backdrop" class="absolute inset-0 bg-slate-900/50 backdrop-blur-[2px] transition-opacity"></div>
+      <aside class="project-drawer-panel absolute right-0 top-0 flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl">
+        <header class="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-3">
+          <p id="project-drawer-title" class="text-sm font-medium text-slate-500">Project details</p>
+          <button
+            id="project-drawer-close"
+            type="button"
+            class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Close project panel"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </header>
+        <div id="view-project" class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"></div>
+      </aside>
+    </div>
+
+    <div id="app-loading" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+      <div class="rounded-xl bg-white px-6 py-4 shadow-xl">
+        <p data-loading-text class="text-sm font-medium text-slate-700">Loading…</p>
+      </div>
+    </div>
+    <div id="app-toast" class="hidden"></div>
+    <div id="weekly-export-root" class="hidden fixed left-[-9999px] top-0"></div>
+
+    <dialog id="new-project-dialog" class="rounded-xl p-0 shadow-xl backdrop:bg-slate-900/40">
+      <form id="form-new-project" class="w-[28rem] max-w-[95vw] p-4">
+        <h3 class="text-lg font-semibold">New project</h3>
+        <div class="mt-3 grid gap-3">
+          <label class="text-sm">Project number<input name="projectNumber" required class="mt-1 w-full rounded border-slate-300" placeholder="TBD-001" /></label>
+          <label class="text-sm">Title<input name="title" required class="mt-1 w-full rounded border-slate-300" /></label>
+          <label class="text-sm">Client<input name="client" class="mt-1 w-full rounded border-slate-300" /></label>
+          <label class="text-sm">Stage<select name="stage" class="mt-1 w-full rounded border-slate-300"></select></label>
+          <label class="text-sm">Status<select name="status" class="mt-1 w-full rounded border-slate-300"></select></label>
+          <label class="text-sm">Cyber PM (emails ; separated)<input name="cyberPM" class="mt-1 w-full rounded border-slate-300" /></label>
+          <label class="text-sm">Budget MM<input name="budgetMM" type="number" step="0.01" class="mt-1 w-full rounded border-slate-300" /></label>
+        </div>
+        <div class="mt-4 flex justify-end gap-2">
+          <button type="button" class="rounded border px-3 py-1.5 text-sm" onclick="document.getElementById('new-project-dialog').close()">Cancel</button>
+          <button type="submit" class="rounded bg-sky-600 px-3 py-1.5 text-sm text-white">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="column-picker-dialog" class="rounded-xl p-0 shadow-xl backdrop:bg-slate-900/40">
+      <form method="dialog" class="w-80 p-4">
+        <h3 class="font-semibold">Visible columns</h3>
+        <div id="column-picker-options" class="mt-3 max-h-64 space-y-2 overflow-y-auto"></div>
+        <div class="mt-4 flex justify-end gap-2">
+          <button type="button" class="rounded border px-3 py-1.5 text-sm" onclick="this.closest('dialog').close()">Cancel</button>
+          <button id="column-picker-apply" type="button" class="rounded bg-sky-600 px-3 py-1.5 text-sm text-white">Apply</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/sp-client.js"></script>
+    <script src="js/field-resolver.js"></script>
+    <script src="js/normalize.js"></script>
+    <script src="js/rag.js"></script>
+    <script src="js/save-service.js"></script>
+    <script src="js/data-service.js"></script>
+    <script src="js/change-panel.js"></script>
+    <script src="js/analytics.js"></script>
+    <script src="libs/countup/countUp.umd.js"></script>
+    <script src="libs/tippy/popper.min.js"></script>
+    <script src="libs/tippy/tippy-bundle.umd.min.js"></script>
+    <script src="libs/tabulator/tabulator.min.js"></script>
+    <script src="libs/flatpickr/flatpickr.min.js"></script>
+    <script src="js/charts-ui.js"></script>
+    <script src="js/insights-ui.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/project-ui.js"></script>
+    <script src="js/weekly-export.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
