@@ -21,6 +21,11 @@
     tippyInstances = [];
   }
 
+  function setTableCount(id, n) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(n);
+  }
+
   function animateStat(id, value, decimals) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -49,35 +54,73 @@
     animateStat('insight-count-blocked', kpis.blocked);
   }
 
-  function ragPlain(cell) {
-    return cell.getValue() || 'Grey';
+  function htmlFormatter(buildHtml) {
+    return function (cell, _fp, onRendered) {
+      onRendered(() => {
+        cell.getElement().innerHTML = buildHtml(cell);
+      });
+      return '';
+    };
   }
 
-  function buildTabulator(elId, columns, data, onRowClick) {
+  function ragBadge(cell) {
+    const rag = cell.getValue() || 'Grey';
+    const hex = u.ragHex(rag);
+    return `<span class="insight-rag-pill" style="--rag:${hex}">${rag}</span>`;
+  }
+
+  function daysBlockedCell(cell) {
+    const days = Number(cell.getValue()) || 0;
+    const cls = days > 14 ? 'insight-num-warn' : days > 7 ? 'insight-num-caution' : '';
+    return `<span class="${cls}">${days}</span>`;
+  }
+
+  function provisionCell(cell) {
+    const v = cell.getValue() || '—';
+    const map = {
+      Yes: 'insight-badge insight-badge-ok',
+      No: 'insight-badge insight-badge-bad',
+      Pending: 'insight-badge insight-badge-warn',
+      'Not assessed': 'insight-badge insight-badge-muted',
+    };
+    const cls = map[v] || 'insight-badge insight-badge-muted';
+    return `<span class="${cls}">${u.plainText(v)}</span>`;
+  }
+
+  function slippageDatesCell(cell, field) {
+    const row = cell.getRow().getData();
+    if (field === 'originalDate') {
+      return `<span class="insight-date-old">${u.plainText(cell.getValue())}</span>`;
+    }
+    return `<span class="insight-date-new">${u.plainText(cell.getValue())}</span>`;
+  }
+
+  function buildTabulator(elId, columns, data, onRowClick, tableHeight) {
     const el = document.getElementById(elId);
     if (!el || typeof Tabulator === 'undefined') return null;
+
+    const h = tableHeight || Math.min(360, 52 + Math.max(data.length, 3) * 44);
 
     const table = new Tabulator(el, {
       data,
       layout: 'fitColumns',
-      height: Math.min(320, 56 + data.length * 36),
-      placeholder: 'Nothing to show — good news!',
-      columnDefaults: { headerSort: true, vertAlign: 'middle' },
+      height: h,
+      placeholder: 'Nothing here — that is usually good news.',
+      columnDefaults: {
+        headerSort: true,
+        vertAlign: 'middle',
+        headerHozAlign: 'left',
+        resizable: false,
+      },
       columns,
       rowFormatter: (row) => {
-        const elRow = row.getElement();
-        elRow.classList.add('cursor-pointer', 'hover:bg-slate-50');
-        const rag = row.getData().rag;
-        const ragCell = elRow.querySelector('[tabulator-field="rag"]');
-        if (ragCell && rag) {
-          ragCell.style.color = u.ragHex(rag);
-        }
+        row.getElement().classList.add('insight-table-row');
       },
     });
 
-    if (onRowClick) {
-      table.on('rowClick', (_, row) => onRowClick(row.getData()));
-    }
+    table.on('rowClick', (_, row) => {
+      if (onRowClick) onRowClick(row.getData());
+    });
     return table;
   }
 
@@ -88,18 +131,19 @@
       projectNumber: b.project.projectNumber,
       reason: u.plainText(b.reason),
       days: b.days,
-      cyberPM: b.cyberPM,
+      cyberPM: b.cyberPM || '—',
       projectId: b.project.id,
       rag: b.project.rag,
     }));
 
+    setTableCount('table-count-blocked', blocked.length);
     tabBlocked = buildTabulator(
       'tabulator-blocked',
       [
-        { title: 'Project', field: 'projectNumber', width: 120 },
-        { title: 'RAG', field: 'rag', width: 72, headerSort: false, formatter: ragPlain },
-        { title: 'Reason', field: 'reason', minWidth: 140 },
-        { title: 'Days blocked', field: 'days', hozAlign: 'right', width: 110 },
+        { title: 'Project #', field: 'projectNumber', width: 108, headerTooltip: 'Click row to open project' },
+        { title: 'Health', field: 'rag', width: 88, headerSort: false, formatter: htmlFormatter(ragBadge), hozAlign: 'center' },
+        { title: 'Why blocked', field: 'reason', minWidth: 180, formatter: 'textarea' },
+        { title: 'Days', field: 'days', hozAlign: 'right', width: 72, formatter: htmlFormatter(daysBlockedCell), headerTooltip: 'Days in blocked status' },
         { title: 'Cyber PM', field: 'cyberPM', minWidth: 120 },
       ],
       blocked,
@@ -108,23 +152,24 @@
 
     const gaps = CET.analytics.coverageGap(state).map((g) => ({
       projectNumber: g.project.projectNumber,
-      title: g.project.title,
+      title: u.plainText(g.project.title),
       ageDays: g.ageDays,
-      cyberPM: g.project.cyberPMDisplay,
-      provisioned: g.project.cyberProvisioned,
+      cyberPM: g.project.cyberPMDisplay || '—',
+      provisioned: g.project.cyberProvisioned || 'Not assessed',
       projectId: g.project.id,
       rag: g.project.rag,
     }));
 
+    setTableCount('table-count-coverage', gaps.length);
     tabCoverage = buildTabulator(
       'tabulator-coverage',
       [
-        { title: 'Project', field: 'projectNumber', width: 110 },
-        { title: 'RAG', field: 'rag', width: 72, headerSort: false, formatter: ragPlain },
-        { title: 'Title', field: 'title', minWidth: 160 },
-        { title: 'Age (days)', field: 'ageDays', hozAlign: 'right', width: 100 },
-        { title: 'Cyber prov.', field: 'provisioned', width: 110 },
-        { title: 'Cyber PM', field: 'cyberPM', minWidth: 100 },
+        { title: 'Project #', field: 'projectNumber', width: 108 },
+        { title: 'Health', field: 'rag', width: 88, headerSort: false, formatter: htmlFormatter(ragBadge), hozAlign: 'center' },
+        { title: 'Project name', field: 'title', minWidth: 160 },
+        { title: 'Age (days)', field: 'ageDays', hozAlign: 'right', width: 88 },
+        { title: 'Cyber assessed', field: 'provisioned', width: 118, formatter: htmlFormatter(provisionCell), hozAlign: 'center' },
+        { title: 'Cyber PM', field: 'cyberPM', minWidth: 110 },
       ],
       gaps,
       (row) => onOpenProject(row.projectId)
@@ -140,17 +185,29 @@
       projectId: s.project?.id,
     }));
 
+    setTableCount('table-count-slippage', slips.length);
     tabSlippage = buildTabulator(
       'tabulator-slippage',
       [
-        { title: 'Project', field: 'projectNumber', width: 110 },
-        { title: 'Milestone', field: 'type', minWidth: 120 },
-        { title: 'Was', field: 'originalDate', width: 100 },
-        { title: 'Now', field: 'currentDate', width: 100 },
-        { title: 'Weeks slipped', field: 'weeksSlipped', hozAlign: 'right', width: 110 },
+        { title: 'Project #', field: 'projectNumber', width: 108 },
+        { title: 'Milestone', field: 'type', minWidth: 130 },
+        {
+          title: 'Planned was',
+          field: 'originalDate',
+          width: 112,
+          formatter: htmlFormatter((cell) => slippageDatesCell(cell, 'originalDate')),
+        },
+        {
+          title: 'Planned now',
+          field: 'currentDate',
+          width: 112,
+          formatter: htmlFormatter((cell) => slippageDatesCell(cell, 'currentDate')),
+        },
+        { title: 'Weeks late', field: 'weeksSlipped', hozAlign: 'right', width: 96 },
       ],
       slips,
-      (row) => row.projectId && onOpenProject(row.projectId)
+      (row) => row.projectId && onOpenProject(row.projectId),
+      Math.min(400, 52 + Math.max(slips.length, 3) * 44)
     );
   }
 

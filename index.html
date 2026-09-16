@@ -20,13 +20,15 @@
     <link rel="stylesheet" href="libs/flatpickr/flatpickr.min.css" />
     <script src="libs/chartjs/chart.umd.min.js"></script>
     <script src="libs/chartjs/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.49.0/dist/apexcharts.min.js"></script>
     <script src="js/chart-setup.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="libs/pnp-3.0.10.js"></script>
+    <script src="libs/spListService.js"></script>
   </head>
   <body class="min-h-screen bg-slate-100 text-slate-900">
     <header class="border-b border-slate-200 bg-white print:hidden">
-      <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+      <div class="page-content-width flex flex-wrap items-center justify-between gap-3 py-4">
         <div>
           <h1 class="text-xl font-semibold tracking-tight">Cyber Efforts Tracker</h1>
           <p class="text-sm text-slate-500">Digital &amp; Cyber Readiness · Project &amp; effort management</p>
@@ -43,19 +45,20 @@
           </button>
         </div>
       </div>
-      <nav id="main-nav" class="mx-auto max-w-7xl border-t border-slate-100 px-4 print:hidden" aria-label="Main">
+      <nav id="main-nav" class="page-content-width border-t border-slate-100 print:hidden" aria-label="Main">
         <div class="flex gap-1">
           <button type="button" data-nav="dashboard" class="main-tab">Dashboard</button>
           <button type="button" data-nav="projects" class="main-tab">Projects</button>
           <button type="button" data-nav="insights" class="main-tab">Insights</button>
+          <button type="button" data-nav="add-record" class="main-tab">Add a Record</button>
         </div>
       </nav>
     </header>
 
-    <p id="load-error" class="mx-auto hidden max-w-7xl px-4 py-2 text-sm text-red-700"></p>
-    <p id="export-meta" class="mx-auto max-w-7xl px-4 pt-4 text-xs text-slate-500 print:block"></p>
+    <p id="load-error" class="page-content-width hidden py-2 text-sm text-red-700"></p>
+    <p id="export-meta" class="page-content-width pt-4 text-xs text-slate-500 print:block"></p>
 
-    <main class="mx-auto max-w-7xl px-4 py-6">
+    <main class="page-content-width py-6">
       <!-- DASHBOARD: weekly management view -->
       <section data-view="dashboard" class="view-panel space-y-8">
         <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
@@ -217,7 +220,7 @@
               </div>
               <button type="button" class="insight-help" data-tippy-content="Share of active projects in each RAG band. Click a slice to filter Projects.">?</button>
             </header>
-            <div class="insight-chart-wrap"><canvas id="chart-rag"></canvas></div>
+            <div class="insight-chart-wrap"><div id="chart-rag" class="insight-chart-host" role="img" aria-label="Portfolio RAG chart"></div></div>
           </article>
           <article class="insight-card">
             <header class="insight-card-header">
@@ -227,7 +230,7 @@
               </div>
               <button type="button" class="insight-help" data-tippy-content="Where delivery effort is stuck: Active, Blocked, On hold, etc.">?</button>
             </header>
-            <div class="insight-chart-wrap"><canvas id="chart-status"></canvas></div>
+            <div class="insight-chart-wrap"><div id="chart-status" class="insight-chart-host" role="img" aria-label="Status breakdown chart"></div></div>
           </article>
           <article class="insight-card lg:col-span-2">
             <header class="insight-card-header">
@@ -237,7 +240,7 @@
               </div>
               <button type="button" class="insight-help" data-tippy-content="Bar height = count at each stage. Colour intensity follows RAG-style scale (green = fuller funnel).">?</button>
             </header>
-            <div class="insight-chart-wrap insight-chart-wrap-wide"><canvas id="chart-stage"></canvas></div>
+            <div class="insight-chart-wrap insight-chart-wrap-wide"><div id="chart-stage" class="insight-chart-host" role="img" aria-label="Stage funnel chart"></div></div>
           </article>
           <article class="insight-card lg:col-span-2">
             <header class="insight-card-header">
@@ -247,7 +250,7 @@
               </div>
               <button type="button" class="insight-help" data-tippy-content="Bar colour matches project RAG. Amber rule: ≥80% of budget used before Detailed Design. Click a bar to open the project.">?</button>
             </header>
-            <div class="insight-chart-wrap insight-chart-wrap-wide"><canvas id="chart-effort"></canvas></div>
+            <div class="insight-chart-wrap insight-chart-wrap-wide"><div id="chart-effort" class="insight-chart-host" role="img" aria-label="Effort versus budget chart"></div></div>
           </article>
           <article class="insight-card lg:col-span-2">
             <header class="insight-card-header">
@@ -257,40 +260,58 @@
               </div>
               <button type="button" class="insight-help" data-tippy-content="Each colour is a person (RAG palette cycle). Use this to spot overloaded PMs.">?</button>
             </header>
-            <div class="insight-chart-wrap insight-chart-wrap-wide"><canvas id="chart-load"></canvas></div>
+            <div class="insight-chart-wrap insight-chart-wrap-wide"><div id="chart-load" class="insight-chart-host" role="img" aria-label="Workload by Cyber PM chart"></div></div>
           </article>
         </div>
 
-        <div class="space-y-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Detail tables</h3>
-          <div class="grid gap-4 xl:grid-cols-2">
-            <article class="insight-card">
-              <header class="insight-card-header border-amber-200/80">
-                <div>
-                  <h3 class="text-amber-900">Blocked by client</h3>
-                  <p>Longest blockers first</p>
+        <div class="insight-detail-section">
+          <div class="insight-detail-intro">
+            <div>
+              <h3 class="insight-detail-title">Action lists</h3>
+              <p class="insight-detail-lead">
+                Sort any column. Click a row to open the project drawer. Counts update when you refresh data.
+              </p>
+            </div>
+          </div>
+          <div class="grid gap-5 xl:grid-cols-2">
+            <article class="insight-card insight-table-card insight-table-card-warn">
+              <header class="insight-card-header">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3>Blocked by client</h3>
+                    <span id="table-count-blocked" class="insight-table-count">0</span>
+                  </div>
+                  <p>Projects waiting on the client — sorted by longest block first.</p>
                 </div>
               </header>
               <div id="tabulator-blocked" class="insight-table"></div>
+              <p class="insight-table-foot">Days &gt; 14 often drives Red RAG.</p>
             </article>
-            <article class="insight-card">
+            <article class="insight-card insight-table-card">
               <header class="insight-card-header">
-                <div>
-                  <h3>Coverage gaps</h3>
-                  <p>No Cyber PM or not assessed</p>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3>Coverage gaps</h3>
+                    <span id="table-count-coverage" class="insight-table-count">0</span>
+                  </div>
+                  <p>Missing Cyber PM assignment or cyber not yet assessed.</p>
                 </div>
               </header>
               <div id="tabulator-coverage" class="insight-table"></div>
+              <p class="insight-table-foot">Assign a Cyber PM and set Cyber provisioned when known.</p>
             </article>
-            <article class="insight-card xl:col-span-2">
-              <header class="insight-card-header border-red-200/80 flex-wrap gap-2">
-                <div>
-                  <h3 class="text-red-900">Schedule slippage</h3>
-                  <p>Planned dates moved later (from change log)</p>
+            <article class="insight-card insight-table-card insight-table-card-danger xl:col-span-2">
+              <header class="insight-card-header flex-wrap gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3>Schedule slippage</h3>
+                    <span id="table-count-slippage" class="insight-table-count">0</span>
+                  </div>
+                  <p>Milestone dates pushed later — detected from the change log.</p>
                 </div>
-                <label class="ml-auto flex items-center gap-2 text-sm font-normal text-slate-600">
-                  Lookback
-                  <select id="insights-slippage-range" class="rounded-lg border-slate-300 py-1 pl-2 pr-8 text-sm">
+                <label class="insight-slippage-control flex shrink-0 items-center gap-2 text-sm text-slate-600">
+                  <span class="font-medium text-slate-700">Look back</span>
+                  <select id="insights-slippage-range" class="rounded-lg border border-slate-300 bg-white py-1.5 pl-2 pr-8 text-sm shadow-sm">
                     <option value="4">4 weeks</option>
                     <option value="8" selected>8 weeks</option>
                     <option value="12">12 weeks</option>
@@ -298,8 +319,249 @@
                 </label>
               </header>
               <div id="tabulator-slippage" class="insight-table"></div>
+              <p class="insight-table-foot">“Planned was” vs “Planned now” shows how far dates moved.</p>
             </article>
           </div>
+        </div>
+      </section>
+
+      <!-- ADD RECORD: guided create flow (Projects → Submissions → Effort → Notes) -->
+      <section data-view="add-record" class="view-panel hidden space-y-6">
+        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 class="text-xl font-semibold tracking-tight">Add a record</h2>
+          <p class="mt-2 max-w-3xl text-sm text-slate-600">
+            Add data in order so lookups and derived fields work correctly:
+            <strong>Project</strong> first, then optional <strong>Submissions</strong>, <strong>Effort</strong>, and
+            <strong>Notes</strong>. The <strong>ChangeLog</strong> is updated automatically on every save (do not add
+            ChangeLog rows manually).
+          </p>
+          <p id="add-record-step-hint" class="mt-3 text-sm font-medium text-sky-800"></p>
+          <p id="add-record-project-status" class="mt-1 text-xs text-slate-500"></p>
+        </div>
+
+        <nav class="add-record-stepper" aria-label="Add record steps">
+          <button type="button" data-add-step-nav="1" class="add-record-step-btn is-active">1. Project</button>
+          <button type="button" data-add-step-nav="2" class="add-record-step-btn">2. Submissions</button>
+          <button type="button" data-add-step-nav="3" class="add-record-step-btn">3. Effort</button>
+          <button type="button" data-add-step-nav="4" class="add-record-step-btn">4. Notes</button>
+          <button type="button" data-add-step-nav="5" class="add-record-step-btn">5. ChangeLog</button>
+        </nav>
+
+        <div data-add-step="1" class="add-record-panel">
+          <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 class="text-lg font-semibold">1 — Projects list (required first)</h3>
+            <p class="mt-1 text-sm text-slate-500">Creates the main project ID used by all other lists.</p>
+            <form id="form-add-record-project" class="mt-4 grid gap-4 md:grid-cols-2">
+              <label class="text-sm md:col-span-2">
+                Project number <span class="text-red-600">*</span>
+                <input name="projectNumber" required class="add-field" placeholder="TBD-001 or S25128-0101D" />
+              </label>
+              <label class="text-sm md:col-span-2">
+                Project name <span class="text-red-600">*</span>
+                <input name="title" required class="add-field" />
+              </label>
+              <label class="text-sm">
+                Client / department
+                <input name="client" class="add-field" />
+              </label>
+              <label class="text-sm">
+                Cyber provisioned
+                <select name="cyberProvisioned" id="add-proj-cyber-prov" class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Stage
+                <select name="stage" id="add-proj-stage" class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Project status
+                <select name="status" id="add-proj-status" class="add-field"></select>
+              </label>
+              <label id="add-proj-status-reason-wrap" class="text-sm hidden md:col-span-2">
+                Status reason <span class="text-red-600">*</span> (required for Blocked / On hold)
+                <input name="statusReason" id="add-proj-status-reason" class="add-field" />
+              </label>
+              <label class="text-sm">
+                Project manager (email)
+                <input name="projectPM" class="add-field" placeholder="name@dar.com" />
+              </label>
+              <label class="text-sm">
+                Project owner (DSS PM, emails ; separated)
+                <input name="projectOwner" class="add-field" placeholder="owner@dar.com" />
+              </label>
+              <label class="text-sm md:col-span-2">
+                Cyber PM (emails ; separated)
+                <input name="cyberPM" class="add-field" />
+              </label>
+              <label class="text-sm">
+                Cyber budget (man-months)
+                <input name="budgetMM" type="number" step="0.01" min="0" class="add-field" />
+              </label>
+              <p class="text-xs text-slate-500 md:col-span-2">
+                <strong>RAG status</strong> is computed automatically after save (not typed here). Track schedule dates
+                using <em>Submissions</em> planned dates in step 2.
+              </p>
+              <label class="text-sm md:col-span-2">
+                Description (optional — saved as an Internal note on the project)
+                <textarea name="description" rows="3" class="add-field"></textarea>
+              </label>
+              <div class="md:col-span-2 flex flex-wrap gap-2 pt-2">
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
+                  Create project
+                </button>
+              </div>
+            </form>
+            <div class="mt-6 border-t border-slate-100 pt-4">
+              <p class="text-sm font-medium text-slate-700">Already have a project?</p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <select id="add-record-existing-project" class="add-field max-w-md flex-1"></select>
+                <button type="button" id="btn-add-record-use-project" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50">
+                  Use for steps 2–4
+                </button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div data-add-step="2" class="add-record-panel hidden">
+          <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 class="text-lg font-semibold">2 — Submissions list</h3>
+            <p class="mt-1 text-sm text-slate-500">One row per milestone or deliverable. You can submit this form multiple times.</p>
+            <form id="form-add-record-submission" class="mt-4 grid gap-4 md:grid-cols-2">
+              <label class="text-sm md:col-span-2">
+                Related project <span class="text-red-600">*</span>
+                <select name="projectId" id="add-sub-project" required class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Submission type <span class="text-red-600">*</span>
+                <select name="type" id="add-sub-type" required class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Submission status
+                <select name="submissionStatus" id="add-sub-status" class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Due date (planned) <span class="text-red-600">*</span>
+                <input name="plannedDate" type="date" required class="add-field" />
+              </label>
+              <label class="text-sm">
+                Responsible person (email)
+                <input name="owner" class="add-field" placeholder="name@dar.com" />
+              </label>
+              <label class="text-sm md:col-span-2">
+                Submission name / description
+                <input name="description" class="add-field" placeholder="e.g. Concept cyber report" />
+              </label>
+              <label class="text-sm md:col-span-2">
+                Notes
+                <textarea name="notes" rows="2" class="add-field"></textarea>
+              </label>
+              <label class="text-sm md:col-span-2">
+                Reference (transmittal #)
+                <input name="reference" class="add-field" />
+              </label>
+              <div class="md:col-span-2">
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
+                  Add submission
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+
+        <div data-add-step="3" class="add-record-panel hidden">
+          <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 class="text-lg font-semibold">3 — EffortLog list</h3>
+            <p class="mt-1 text-sm text-slate-500">
+              This list stores <strong>man-months (MM)</strong> per person and month — not hourly timesheets. Activity /
+              comments can be stored as an optional linked note.
+            </p>
+            <form id="form-add-record-effort" class="mt-4 grid gap-4 md:grid-cols-2">
+              <label class="text-sm md:col-span-2">
+                Related project <span class="text-red-600">*</span>
+                <select name="projectId" id="add-effort-project" required class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Team member (email)
+                <input name="person" class="add-field" placeholder="name@dar.com" />
+              </label>
+              <label class="text-sm">
+                Month
+                <input name="month" type="month" required class="add-field" />
+              </label>
+              <label class="text-sm">
+                Man-months consumed
+                <input name="mmConsumed" type="number" step="0.01" min="0" required class="add-field" />
+              </label>
+              <label class="text-sm">
+                Activity / task (optional)
+                <input name="activity" class="add-field" />
+              </label>
+              <label class="text-sm md:col-span-2">
+                Comments (optional — saved as a note)
+                <textarea name="comments" rows="2" class="add-field"></textarea>
+              </label>
+              <div class="md:col-span-2">
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
+                  Add effort row
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+
+        <div data-add-step="4" class="add-record-panel hidden">
+          <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 class="text-lg font-semibold">4 — Notes list (optional)</h3>
+            <p class="mt-1 text-sm text-slate-500">Notes cannot be edited after save. Use for risks, decisions, and updates.</p>
+            <form id="form-add-record-note" class="mt-4 grid gap-4 md:grid-cols-2">
+              <label class="text-sm md:col-span-2">
+                Related project <span class="text-red-600">*</span>
+                <select name="projectId" id="add-note-project" required class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Note type
+                <select name="category" id="add-note-category" class="add-field"></select>
+              </label>
+              <label class="text-sm">
+                Created by
+                <span id="add-note-author-hint" class="add-field inline-flex items-center bg-slate-50 text-slate-600">Signed-in user</span>
+              </label>
+              <label class="text-sm md:col-span-2">
+                Note title
+                <input name="noteTitle" class="add-field" />
+              </label>
+              <label class="text-sm md:col-span-2">
+                Note description <span class="text-red-600">*</span>
+                <textarea name="noteText" rows="4" required class="add-field"></textarea>
+              </label>
+              <div class="md:col-span-2">
+                <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700">
+                  Add note
+                </button>
+              </div>
+            </form>
+          </article>
+        </div>
+
+        <div data-add-step="5" class="add-record-panel hidden">
+          <article class="rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+            <h3 class="text-lg font-semibold">5 — ChangeLog (automatic)</h3>
+            <p class="mt-2 text-sm text-slate-600">
+              Do <strong>not</strong> add ChangeLog items manually. When you create or update a project, submission,
+              effort row, or note through this app, SharePoint receives the item via <strong>PnP.js 3</strong>
+              (<code class="text-xs">$pnp.sp.web.lists.getByTitle(...).items.add</code>) and the app writes ChangeLog
+              rows for:
+            </p>
+            <ul class="mt-3 list-inside list-disc space-y-1 text-sm text-slate-600">
+              <li>Creates (ChangeType = Create)</li>
+              <li>Field updates on tracked fields (ChangeType = Update)</li>
+              <li>Deletes where allowed (ChangeType = Delete)</li>
+            </ul>
+            <p class="mt-3 text-sm text-slate-600">
+              Each row stores project number, source list, item ID, field name, old/new values, changed by, and
+              timestamp (UTC).
+            </p>
+          </article>
         </div>
       </section>
 
@@ -381,6 +643,7 @@
     <script src="libs/flatpickr/flatpickr.min.js"></script>
     <script src="js/charts-ui.js"></script>
     <script src="js/insights-ui.js"></script>
+    <script src="js/add-record-ui.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/project-ui.js"></script>
     <script src="js/weekly-export.js"></script>

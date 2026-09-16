@@ -124,11 +124,16 @@
     });
   }
 
+  function refreshAddRecord() {
+    CET.addRecordUI.refresh(data.state);
+  }
+
   function refreshCurrentView() {
     const tab = CET.appState.mainTab;
     if (tab === 'dashboard') refreshDashboard();
     else if (tab === 'projects') refreshProjects();
     else if (tab === 'insights') refreshInsights();
+    else if (tab === 'add-record') refreshAddRecord();
   }
 
   function openProject(id) {
@@ -448,8 +453,11 @@
       [F.projects.stage]: formData.get('stage') || 'Pre-Concept',
       [F.projects.status]: formData.get('status') || 'Active',
       [F.projects.cyberProvisioned]: 'Not assessed',
-      [F.projects.budgetMM]: formData.get('budgetMM') ? Number(formData.get('budgetMM')) : null,
     };
+    const budgetRaw = formData.get('budgetMM');
+    if (budgetRaw !== null && String(budgetRaw).trim() !== '') {
+      payload[F.projects.budgetMM] = Number(budgetRaw);
+    }
     Object.assign(
       payload,
       await CET.projectUI.buildPersonPayload(F.projects.cyberPM, formData.get('cyberPM'), true)
@@ -617,7 +625,7 @@
     }
 
     const tab = hash.replace('#', '') || 'dashboard';
-    const allowed = ['dashboard', 'projects', 'insights'];
+    const allowed = ['dashboard', 'projects', 'insights', 'add-record'];
     const active = allowed.includes(tab) ? tab : 'dashboard';
     CET.appState.mainTab = active;
     showView(active);
@@ -627,12 +635,19 @@
     else if (active === 'projects') refreshProjects();
     else if (active === 'insights') {
       requestAnimationFrame(() => refreshInsights());
+    } else if (active === 'add-record') {
+      refreshAddRecord();
     }
   }
 
   async function init() {
     bindDashboardControls();
     bindProjectDrawer();
+    CET.addRecordUI.bind({
+      getState: () => data.state,
+      reloadData: () => data.loadAll(),
+      onSaved: () => refreshCurrentView(),
+    });
     window.addEventListener('hashchange', handleRoute);
 
     try {

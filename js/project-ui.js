@@ -399,7 +399,8 @@
     const ids = await resolveUserIds(emailsText);
     const idField = `${fieldInternal}Id`;
     if (!ids.length) {
-      return isMulti ? { [idField]: { results: [] } } : { [idField]: null };
+      // Omit empty person fields on create — null or { results: [] } causes SharePoint 400.
+      return {};
     }
     if (isMulti) return { [idField]: { results: ids } };
     return { [idField]: ids[0] };

@@ -41,24 +41,96 @@
     return $pnp.sp;
   }
 
-  async function createRecord(listName, data) {
+  /** Strip values SharePoint rejects on POST (esp. person / lookup empties). */
+  function stripInvalidPayloadFields(data) {
+    if (!data || typeof data !== 'object') return data;
+    const out = { ...data };
+    Object.keys(out).forEach((key) => {
+      const val = out[key];
+      if (val === null || val === undefined) {
+        delete out[key];
+        return;
+      }
+      if (val === '') {
+        delete out[key];
+        return;
+      }
+      if (val && typeof val === 'object' && Array.isArray(val.results)) {
+        if (!val.results.length) delete out[key];
+      }
+    });
+    return out;
+  }
+
+  async function prepareItemPayload(listName, data, isUpdate) {
+    const stripped = stripInvalidPayloadFields(data);
+    if (typeof SPListService !== 'undefined' && SPListService.normalizeItemPayloadForRest) {
+      try {
+        await SPListService.init();
+        if (SPListService._siteUrl !== getWebUrl()) {
+          SPListService._siteUrl = getWebUrl();
+        }
+        return await SPListService.normalizeItemPayloadForRest(listName, stripped, false, !!isUpdate);
+      } catch (err) {
+        console.warn('[CyberEffortsTracker] Field normalization failed, using stripped payload:', err);
+      }
+    }
+    return stripped;
+  }
+
+  async function logSharePointError(prefix, err) {
+    console.error(prefix, err);
     try {
-      return await getSp().web.lists.getByTitle(listName).items.add(data);
+      const res = err.response || err.originalResponse;
+      if (res && typeof res.clone === 'function') {
+        const text = await res.clone().text();
+        if (text) console.error(`${prefix} response body:`, text);
+      } else if (err.message) {
+        console.error(`${prefix} message:`, err.message);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  async function createRecord(listName, data) {
+    const payload = await prepareItemPayload(listName, data, false);
+    try {
+      if (typeof SPListService !== 'undefined' && SPListService.addListItem) {
+        await SPListService.init();
+        return await SPListService.addListItem(listName, payload);
+      }
+      return await getSp().web.lists.getByTitle(listName).items.add(payload);
     } catch (err) {
-      console.error('Create failed:', err);
+      await logSharePointError(`Create failed (${listName})`, err);
       throw err;
     }
   }
 
   async function updateRecord(listName, itemId, data) {
-    const run = () => getSp().web.lists.getByTitle(listName).items.getById(itemId).update(data);
+    const payload = await prepareItemPayload(listName, data, true);
+    const run = () => getSp().web.lists.getByTitle(listName).items.getById(itemId).update(payload);
     try {
+      if (typeof SPListService !== 'undefined' && SPListService.updateListItem) {
+        await SPListService.init();
+        await SPListService.updateListItem(listName, itemId, payload);
+        return true;
+      }
       await run();
       return true;
     } catch (err) {
-      console.warn('Update failed, retrying once:', err);
-      await run();
-      return true;
+      await logSharePointError(`Update failed (${listName} #${itemId})`, err);
+      try {
+        if (typeof SPListService !== 'undefined' && SPListService.updateListItem) {
+          await SPListService.updateListItem(listName, itemId, payload);
+          return true;
+        }
+        await run();
+        return true;
+      } catch (err2) {
+        await logSharePointError(`Update retry failed (${listName} #${itemId})`, err2);
+        throw err2;
+      }
     }
   }
 
@@ -209,6 +281,7 @@
     getWebUrl,
     getSp,
     createRecord,
+    prepareItemPayload,
     readRecords,
     readRecordsSimple,
     readPaged,

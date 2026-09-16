@@ -1,4 +1,72 @@
+.add-record-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.add-record-step-btn {
+  border-radius: 9999px;
+  border: 1px solid rgb(226 232 240);
+  background: white;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(71 85 105);
+}
+
+.add-record-step-btn:hover {
+  background: rgb(248 250 252);
+}
+
+.add-record-step-btn.is-active {
+  border-color: rgb(14 165 233);
+  background: rgb(224 242 254);
+  color: rgb(3 105 161);
+}
+
+.add-field {
+  margin-top: 0.35rem;
+  display: block;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(203 213 225);
+  padding: 0.45rem 0.65rem;
+  font-size: 0.875rem;
+}
+
+.add-field:focus {
+  outline: 2px solid rgb(125 211 252);
+  outline-offset: 1px;
+}
+
+/**
+ * Main layout: ~80% content width with ~10% inset each side.
+ * Uses percentage padding so the ratio holds on any viewport; min 1rem on very narrow screens.
+ */
+.page-content-width {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: max(1rem, 10%);
+  padding-right: max(1rem, 10%);
+}
+
+@media (min-width: 640px) {
+  .page-content-width {
+    padding-left: 10%;
+    padding-right: 10%;
+  }
+}
+
 @media print {
+  .page-content-width {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+  }
+
   header,
   #main-nav,
   .print\:hidden {
@@ -185,38 +253,190 @@ dialog::backdrop {
 }
 
 .insight-chart-wrap-wide {
-  min-height: 260px;
+  min-height: 280px;
+}
+
+.insight-chart-host {
+  width: 100%;
+  min-height: 220px;
+}
+
+.insight-chart-host .apexcharts-canvas {
+  margin: 0 auto;
+}
+
+.apex-tooltip-custom {
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.apex-tooltip-custom strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: rgb(15 23 42);
+}
+
+.insight-detail-section {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.insight-detail-intro {
+  margin-bottom: 1rem;
+}
+
+.insight-detail-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgb(15 23 42);
+}
+
+.insight-detail-lead {
+  margin-top: 0.35rem;
+  max-width: 42rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgb(100 116 139);
+}
+
+.insight-table-card .insight-card-header {
+  border-bottom: 1px solid rgb(241 245 249);
+  padding-bottom: 0.85rem;
+}
+
+.insight-table-card-warn {
+  border-top: 3px solid rgb(251 191 36);
+}
+
+.insight-table-card-danger {
+  border-top: 3px solid rgb(248 113 113);
+}
+
+.insight-table-count {
+  display: inline-flex;
+  min-width: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgb(241 245 249);
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgb(51 65 85);
+}
+
+.insight-table-foot {
+  margin: 0;
+  border-top: 1px solid rgb(241 245 249);
+  padding: 0.65rem 1rem 0.85rem;
+  font-size: 0.75rem;
+  color: rgb(100 116 139);
 }
 
 .insight-table {
-  padding: 0 0.5rem 0.75rem;
+  padding: 0 0.75rem;
 }
 
 .insight-table .tabulator {
   border: none;
   background: transparent;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .insight-table .tabulator-header {
-  border-bottom: 1px solid rgb(226 232 240);
+  border-bottom: 2px solid rgb(226 232 240);
   background: rgb(248 250 252);
 }
 
-.insight-table .tabulator-col-title {
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgb(100 116 139);
+.insight-table .tabulator-col {
+  border-right: none;
 }
 
-.insight-table .tabulator-row {
+.insight-table .tabulator-col-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(71 85 105);
+}
+
+.insight-table .tabulator-row.insight-table-row {
+  cursor: pointer;
   border-bottom: 1px solid rgb(241 245 249);
+  min-height: 44px;
+}
+
+.insight-table .tabulator-row.insight-table-row:hover {
+  background: rgb(240 249 255) !important;
 }
 
 .insight-table .tabulator-row.tabulator-row-even {
-  background: rgb(248 250 252 / 0.5);
+  background: rgb(248 250 252 / 0.65);
+}
+
+.insight-table .tabulator-cell {
+  padding: 0.5rem 0.65rem;
+}
+
+.insight-rag-pill {
+  display: inline-block;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--rag) 35%, white);
+  background: color-mix(in srgb, var(--rag) 12%, white);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--rag);
+}
+
+.insight-badge {
+  display: inline-block;
+  border-radius: 0.375rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.insight-badge-ok {
+  background: rgb(209 250 229);
+  color: rgb(6 95 70);
+}
+
+.insight-badge-bad {
+  background: rgb(254 226 226);
+  color: rgb(185 28 28);
+}
+
+.insight-badge-warn {
+  background: rgb(254 243 199);
+  color: rgb(180 83 9);
+}
+
+.insight-badge-muted {
+  background: rgb(241 245 249);
+  color: rgb(100 116 139);
+}
+
+.insight-num-warn {
+  font-weight: 700;
+  color: rgb(220 38 38);
+}
+
+.insight-num-caution {
+  font-weight: 600;
+  color: rgb(217 119 6);
+}
+
+.insight-date-old {
+  color: rgb(100 116 139);
+  text-decoration: line-through;
+  text-decoration-color: rgb(203 213 225);
+}
+
+.insight-date-new {
+  font-weight: 600;
+  color: rgb(185 28 28);
 }
 
 .tippy-box[data-theme~='cet-insights'] {
@@ -252,7 +472,8 @@ body.drawer-open {
   overflow: hidden;
 }
 
-.insight-table .tabulator-cell[tabulator-field='rag'] {
-  font-weight: 600;
-  font-size: 0.75rem;
+.insight-table .tabulator-placeholder {
+  padding: 1.25rem;
+  font-size: 0.875rem;
+  color: rgb(100 116 139);
 }
