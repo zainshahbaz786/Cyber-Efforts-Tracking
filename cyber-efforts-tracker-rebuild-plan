@@ -1,0 +1,186 @@
+Cyber Efforts Tracker – Rebuild Plan
+Mario Abdel Massih, Digital & Cyber Readiness Unit
+September 2026
+What we are building
+A tracker for cybersecurity work across Dar projects, with a weekly report for management that answers four questions:
+1.	What is due in the next two weeks?
+2.	What is overdue or slipped?
+3.	What changed since last week?
+4.	Where is the effort going, and who is overloaded?
+The current version copies the Excel. The Excel cannot answer those questions because it stores several milestones in one cell, has no submission dates, and keeps no history. So we restructure the data first, then rebuild the screens.
+The work is in five steps. Each step ends with a review with Mario before the next starts.
+________________________________________
+Step 1 — Create the lists
+Goal: replace the single flat list with five linked lists.
+Do this:
+1.	Create the five lists below in the SharePoint site.
+2.	For every Choice column, disable “allow fill-in values”.
+3.	Turn versioning on for all lists (audit only).
+4.	Permissions: users Read on all lists; the app account (or users, if the app runs under their identity — tell Mario which) Contribute on Projects, Submissions, EffortLog, Notes; Add-only on ChangeLog.
+5.	Write a page on the site listing every list, column, type and choice values.
+Done when: Mario has reviewed the lists and the schema page.
+List 1: Projects — one row per project
+Column	Type	Notes
+ProjectNumber	Text, unique, indexed	e.g. S25128-0101D. Never blank — use TBD-001 etc. if unknown
+Title	Text	
+Client	Text	
+Stage	Choice	Pre-Concept, Concept, Schematic Design, Detailed Design, IFC, Tender, Supervision, Gap Assessment, Other
+Status	Choice	Active, Pending kickoff, Blocked-client, On hold, Closed, Not awarded
+StatusReason	Text	Required when Status is Blocked-client or On hold
+BlockedSince	Date	Set by the app (Step 2)
+CyberProvisioned	Choice	Yes, No, Pending, Not assessed (default)
+CyberPM	Person, multi	
+DSS_PM	Person, multi	
+ProjectPM	Person	
+BudgetMM	Number, 2 dp	Cyber budget in man-months
+NextSubmissionDate	Date	Set by the app (Step 2)
+NextSubmissionType	Text	Set by the app (Step 2)
+RAG	Choice	Red, Amber, Green, Grey — set by the app (Step 2)
+LatestNote	Multi-line text	Set by the app (Step 2)
+List 2: Submissions — one row per milestone or deliverable
+Column	Type	Notes
+Project	Lookup to Projects, indexed	Required
+Type	Choice	CMP, Concept Report, 30% SD, 50% SD, 60% SD, 100% SD, DD, 90% DD, 100% DD, IFC, TRA, Design Review, Tender Evaluation, Spec Review, Other
+Description	Text	
+PlannedDate	Date, indexed	Required
+ActualDate	Date	Empty until submitted
+SubmissionStatus	Choice	Planned, In progress, Submitted, Cancelled
+Owner	Person	
+Reference	Text	Transmittal number
+A submission is overdue when PlannedDate is in the past, ActualDate is empty, and status is not Cancelled. This replaces the current overdue logic.
+List 3: EffortLog — one row per project, person and month
+Column	Type
+Project	Lookup to Projects, indexed
+Month	Date (first of month), indexed
+Person	Person
+MMConsumed	Number, 2 dp
+List 4: Notes — one row per note, never edited
+Column	Type
+Project	Lookup to Projects, indexed
+NoteDate	Date and time
+Author	Person
+Category	Choice: Client, Internal, Risk, Decision
+Text	Multi-line text
+List 5: ChangeLog — one row per field change, written by the app
+Column	Type
+ProjectNumber	Text, indexed
+SourceList	Choice: Projects, Submissions, EffortLog, Notes
+ItemID	Number, indexed
+ItemLabel	Text (project title or submission type)
+Field	Text
+OldValue	Multi-line text
+NewValue	Multi-line text
+ChangeType	Choice: Create, Update, Delete
+ChangedOn	Date and time, indexed (UTC)
+ChangedBy	Person
+Suppressed	Yes/No, default No
+________________________________________
+Step 2 — Save logic in the app
+Goal: every save goes through one routine that records history and updates the derived fields. This is what makes the weekly report possible.
+Do this — on every save of a Project, Submission, EffortLog or Note:
+1.	Read the current values of the item.
+2.	Compare with the incoming values, field by field. Convert both to text the same way before comparing: dates as YYYY-MM-DD, numbers with 2 decimals, people as login names, multi-person sorted and joined with “;”, empty as ““.
+3.	If nothing changed, stop.
+4.	Save the item.
+5.	Write one ChangeLog row per changed field (ChangeType = Create for new items). For Notes, write one row on create only, NewValue = first 200 characters.
+6.	Update the parent project’s derived fields (these writes are not logged):
+–	NextSubmissionDate / NextSubmissionType = earliest Submission with empty ActualDate and status not Cancelled.
+–	LatestNote = newest Note text, first 200 characters.
+–	BlockedSince = today when Status becomes Blocked-client; cleared when it changes to anything else.
+–	RAG, using the rules below.
+7.	If any write fails: retry once, then show an error to the user. Never continue silently.
+Tracked fields: - Projects: Stage, Status, StatusReason, CyberProvisioned, CyberPM, DSS_PM, ProjectPM, BudgetMM, Client, Title - Submissions: Type, PlannedDate, ActualDate, SubmissionStatus, Owner - EffortLog: MMConsumed
+RAG rules (computed, never typed by a user; first match wins):
+RAG	Rule
+Red	Any overdue submission, or Blocked-client for more than 14 days
+Amber	A submission due within 7 days that is not In progress or Submitted, or Blocked-client for 14 days or less, or effort used is 80% or more of BudgetMM before Detailed Design
+Grey	Status is Pending kickoff, On hold, Not awarded or Closed, or the project has no submissions
+Green	Everything else
+Delete rules: - A Project can be deleted only when Status is Closed or Not awarded. The app deletes its Submissions, EffortLog and Notes first, and writes Delete rows to ChangeLog. - Notes and ChangeLog rows are never deleted.
+Blanks: empty, “—”, “-” and “(none)” are all stored as empty and shown as “Unassigned” or “Not assessed”. They are never a category in a chart.
+Done when these tests pass: 1. A submission with PlannedDate 6 May and ActualDate 6 May is not overdue. 2. Change a project’s Status to Blocked-client: BlockedSince is set, a ChangeLog row exists, RAG is Amber. 3. Create a project: exactly one ChangeLog row with ChangeType = Create, not one per field.
+________________________________________
+Step 3 — Migrate the Excel
+Goal: move the existing data into the new lists without polluting the history.
+Do this:
+1.	Mario exports the Excel to CSV and cleans it: fills missing project numbers with TBD-###, maps stage and status text to the Choice values, splits Cyber PM names into separate people.
+2.	For each Excel row create one Projects row.
+3.	For each Excel row create Submissions rows: one for “Last Submission” (ActualDate = that date, status Submitted) and one for “Next Submission” (PlannedDate = due date). Where a cell contains several milestones (e.g. 30% CD / 60% SD / 90% DD / 100% IFC), create one row each — Mario will supply these by hand.
+4.	Import the Excel “Notes” column as Notes rows (Category Internal, Author Mario, NoteDate = import date).
+5.	Run the import with a migration flag so ChangeLog rows are written with Suppressed = Yes.
+6.	Run the derived-field update (Step 2, item 6) for every project.
+7.	From now on the Excel is read-only. All updates go through the app.
+Done when: the Overdue count in the app matches Mario’s manual count, and the “What changed this week” panel (Step 4) shows nothing for the migration week.
+________________________________________
+Step 4 — Dashboard and table (first version for management)
+Goal: the screens that produce the weekly report. Build in this order.
+4.1 Four KPI cards at the top (replace the current four)
+Card	Counts
+Due this week	Submissions with PlannedDate in the current week and no ActualDate
+Overdue	Overdue submissions (definition in Step 1)
+Blocked	Projects with Status Blocked-client, plus average days blocked
+Unassigned	Projects with no CyberPM or CyberProvisioned = Not assessed
+Remove the “Due dates” line chart and the “Overdue by due date” bar chart.
+4.2 “What changed this week” panel
+Week = Monday 00:00 to next Monday 00:00, Riyadh time. A selector lets the user pick any past week.
+1.	Query ChangeLog where ChangedOn is inside the week and Suppressed = No, ordered by ChangedOn.
+2.	Group rows by SourceList + ItemID + Field. Take the first OldValue and the last NewValue. If they are equal, drop the group (a change that was reverted in the same week is not reported).
+3.	Put each remaining change in a bucket and show buckets as collapsible sections with counts:
+Bucket	Rule
+New projects	Projects, ChangeType Create
+Moved stage	Field = Stage
+Blocked	Field = Status, new value Blocked-client
+Closed / On hold	Field = Status, new value Closed, On hold or Not awarded
+Submitted	Submissions, Field = ActualDate, old empty, new set
+Slipped	Submissions, Field = PlannedDate, new later than old
+Reassigned	Field is CyberPM, DSS_PM or ProjectPM
+Effort booked	EffortLog, total MMConsumed in the week
+Other	everything else, collapsed
+Each row shows: project, item, field, old → new, who changed it. Clicking opens the project page.
+4.3 “Next 14 days” table
+Submissions with PlannedDate within 14 days and no ActualDate. Columns: Project, Type, Planned date, Owner, RAG, days remaining, latest note. Sorted by planned date.
+4.4 Project table
+•	Default columns: RAG, ProjectNumber, Title, Client, Stage, Status, CyberPM, Next submission (type + date), Latest note.
+•	Available via column picker: DSS PM, Project PM, BudgetMM, MM consumed, CyberProvisioned.
+•	Remove the Modified column.
+•	Default sort: Red first, then NextSubmissionDate ascending.
+•	Filters: Status, Stage, CyberPM, RAG, CyberProvisioned, Client, title text. Preset “My projects” = CyberPM contains the current user.
+•	Inline edit: Status, StatusReason, CyberProvisioned, CyberPM.
+•	Clicking any chart segment filters this table and shows a filter chip.
+Done when: Mario has reviewed it. This version is shown to management. Nothing in Step 5 starts before this review.
+________________________________________
+Step 5 — Project page, remaining dashboards, export
+5.1 Project page (opened by clicking a row)
+Tabs: 1. Overview — all project fields, editable; RAG with the rule that caused it written in words. 2. Milestones — timeline of Submissions (planned vs actual) and the list under it; add, edit, and a “Mark submitted” button that sets ActualDate = today. 3. Effort — EffortLog rows by month; cumulative curve against BudgetMM; add row. 4. Notes — newest first; add note. No edit or delete. 5. History — ChangeLog rows for this project, newest first.
+5.2 Remaining dashboard panels
+Panel	Content
+Slippage	Submissions whose PlannedDate moved later in the last 8 weeks (from ChangeLog): project, type, original date, current date, weeks slipped
+Effort	Per project: BudgetMM vs MM consumed, % used, stage. Bar chart sorted by % used. Highlight 80%+ before Detailed Design
+Load by Cyber PM	MM consumed per person per month, last 6 months, stacked bar
+Blocked by client	Project, reason, BlockedSince, days blocked, CyberPM. Sorted by days
+Coverage gap	Active projects with no CyberPM or CyberProvisioned Not assessed/Pending, with age in days
+Status breakdown	Donut, excluding Closed and Not awarded, no “(none)” slice
+Stage funnel	Active projects per stage, in stage order
+5.3 Weekly pack export
+A button that generates a PDF (and PPTX if practical) inside the app — no Power BI, no Power Automate. Contents in order: KPI cards, What changed, Next 14 days, Overdue, Blocked, Slippage, Effort, Load. Header with week range and generation time. Respects the week selector.
+Done when: all tests below pass.
+________________________________________
+Tests for final acceptance
+1.	Change Status Active → Blocked-client → Active in the same week: nothing in “What changed”.
+2.	Set ActualDate on a submission: appears under Submitted; the project’s Next submission moves to the following one.
+3.	Move a PlannedDate later: appears under Slipped and in the Slippage panel with both dates.
+4.	Enter two people in CyberPM: Load chart shows two bars, not a combined name.
+5.	Try to delete an Active project: refused. Delete a Closed one: succeeds, History still readable.
+6.	Select last week: panel shows last week only.
+7.	Export the weekly pack for last week: all sections present.
+________________________________________
+Things Mario will confirm before Step 1
+•	Final list of Stage values
+•	Final list of Submission Type values
+•	Whether the app runs under a service account or under each user’s identity
+•	Whether the front end is SPFx (limited to v1.4.1 on-prem) or a standalone app calling SharePoint REST
+SharePoint SE rules that apply throughout
+•	Every list query filters on an indexed column and pages at 5,000 items.
+•	Never read the content database directly.
+•	Store dates in UTC, display in Riyadh time.
+•	No dependency on Power Automate, Power BI or the data gateway.
